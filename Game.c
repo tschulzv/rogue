@@ -7,18 +7,6 @@
 #include "Bandit.h"
 #include "Police.h"
 
-typedef struct _Adjacent {
-	int i, j; // site
-	struct _Adjacent* next; // apunta al siguente en la lista
-} Adjacent;
-
-
-typedef struct _Node {
-	int i, j; // site del nodo
-	Adjacent* neighbors; // lista de adyacentes (*SOLO MOVIMIENTOS VALIDOS*)
-}Node;
-
-typedef Node **Graph; // grafo - matriz de Nodos
 
 /*ADD HERE YOUR STRUCTURES DATA 
 E.G. populateAdjacency matrix from the scenario model, etc...*/
@@ -27,12 +15,13 @@ PoliceData* createPoliceData(Game* g) {
 		PoliceData* m = (PoliceData*)malloc(sizeof(struct _PoliceData));
 		if (m) {
 			//init your struct/containers
-			m->replaceThisWithYourDataContainer = NULL;
+			m->graph = NULL;
 			return m;
 		}
 	}
 	return NULL;
 }
+// !!!!!!!!! falta destruir el grafo
 /*don't forget to free all allocated memory*/
 void destroyPoliceData(PoliceData* m) {
 	if (m) {
@@ -45,7 +34,7 @@ BanditData* createBanditData(Game* g) {
 		BanditData* r = (BanditData*)malloc(sizeof(struct _BanditData));
 		if (r) {
 			//init your struct/containers
-			r->replaceThisWithYourDataContainer = NULL;
+			r->graph = NULL;
 			return r;
 		}
 	}
@@ -147,30 +136,50 @@ Graph createGraph(Scenario sce, int N) {
 		// creamos N columnas por cada fila
 		g[i] = malloc(N * sizeof(Node));
 		if (g[i] == NULL) return NULL;
+
 		// crear los nodos para cada celda 
 		for (int j = 0; j < N; j++) {
-			Site s = { i, j };
+			Site thisSite = { i, j };
+			// inicializar datos del nodo
+			g[i][j].site = thisSite;
+			g[i][j].neighbors = NULL;
+
 			// si no es una pared
-			if (isRoomScenario(&sce, s) || isCorridorScenario(&sce, s)) {
-				g[i][j].i = i;
-				g[i][j].j = j;
-			}
+			if (isRoomScenario(&sce, thisSite) || isCorridorScenario(&sce, thisSite)) {
+				// distancias (x, y) a los nodos vecinos
+				int distances[8][2] = {
+					{-1, 0}, {1, 0}, {0, -1}, {0, 1}, 
+					{-1, -1}, {-1, 1}, {1, -1}, {1, 1} // diagnales (si es corredor no se pueden mover)
+				};
 
-			// distancias (x, y) a los adyacentes
-			int neighbors[8][2] = {
-				{-1, 0}, {1, 0}, {0, -1}, {0, 1}, 
-				{-1, -1}, {-1, 1}, {1, -1}, {1, 1} // diagnales (si es corredor no se puede mover aca)
-			};
+				// comprobar cuales de los vecinos son movimientos validos
+				for (int n = 0; n < 8; n++) {
+					// hallar coordenadas del vecino y crear su site
+					int xNeighbor = i + (distances[n][0]);
+					int yNeighbor = j + (distances[n][1]);
 
-			// comprobar cuales de los adyacentes son movimientos validos
-			for (int n = 0; n < 8; n++) {
-				
-			}
+					// verificar que sean coordenadas validas
+					if (xNeighbor >= 0 && xNeighbor < N && yNeighbor >= 0 && yNeighbor < N) {
+						Site neighborSite = { xNeighbor, yNeighbor };
+
+						// si es un movimiento legal agregamos a su lista de adyacentes
+						if (isLegalMoveScenario(&sce, thisSite, neighborSite)) {
+							Adjacent *newAdj = (Adjacent*)malloc(sizeof(Adjacent));
+							if (NULL == newAdj) return NULL;
+							newAdj->site = neighborSite;
+							newAdj->next = g[i][j].neighbors; // anhadir al inicio de la lista para evitar tener que recorrer
+						}
+					
+					}
+				}
+			} 
+
 		}
 	}
 
 	return g;
 }
+
 
 Site getPoliceSite(Game* g) { return g->policeSite; }
 Site getBanditSite(Game* g) { return g->banditSite; }
@@ -227,9 +236,39 @@ int main(int argc, char* argv[]) {
 		printf("Way of use: c:>Proyecto4.exe scenario1.txt\n");
 		return 1;
 	}
+	// se crea el game
 	Game* g = createGame(argv[1]);
+	if (NULL == g) return 1;
+
+	// crear el grafo dado el scenario del game
+	Graph graph = createGraph(*g->scenario, g->N);
+	if (NULL == graph) return 1;
+	
+	// guardar el grafo en police data y bandit data 
+	g->policeData->graph = graph;
+	g->banditData->graph = graph;
+
 	printGame(g);
+
+	// 
 	playGame(g);
 	destroyGame(g);
 	return 0;
 }
+
+/*
+// agregar a la lista de adyacentes
+int addToList(Node n, Adjacent *new) {
+	if (n.neighbors == NULL) { // caso lista vacia
+		n.neighbors = new;
+		return 1;
+	} else { // recorrer la lista hasta el ultimo elemento
+		Adjacent *a = n.neighbors;
+		while (a->next != NULL) {
+			a = a->next;
+		}
+		a->next = new;
+		return 1;
+	}
+	return 0;
+}*/
