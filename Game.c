@@ -173,6 +173,7 @@ Graph createGraph(Scenario sce, int N) {
 							if (NULL == newAdj) return NULL;
 							newAdj->site = neighborSite;
 							newAdj->next = g[i][j].neighbors; // anhadir al inicio de la lista para evitar tener que recorrer
+							g[i][j].neighbors = newAdj; // actualizar inicio de la lista de neighbors
 						}
 					
 					}
@@ -258,6 +259,7 @@ int main(int argc, char* argv[]) {
 	// 
 	playGame(g);
 	destroyGame(g);
+	system("pause");
 	return 0;
 }
 
