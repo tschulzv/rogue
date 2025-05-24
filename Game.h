@@ -58,4 +58,7 @@ void destroyPoliceData(PoliceData* r);
 BanditData* createBanditData(Game* g);
 void destroyBanditData(BanditData* r);
 
+// funciones anhadidas
+Adjacent* getNeighbors(Graph g, int i, int j);
+
 #endif

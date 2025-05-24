@@ -109,6 +109,11 @@ Game* createGame(char* fileName) {
 	return g;
 }
 
+Adjacent* getNeighbors(Graph g, int i, int j) {
+	if (NULL == g || i < 0 || j < 0) return NULL;
+	return g[i][j].neighbors;
+}
+
 void destroyGame(Game* g) {
 	if (g) {
 		if (g->scenario) {
